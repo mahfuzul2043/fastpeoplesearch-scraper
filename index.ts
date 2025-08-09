@@ -40,7 +40,7 @@ async function main() {
 
       // Check for 'We could not find the page you were looking for.'
       const notFound = await page.evaluate(() => {
-        return !!document.body.innerText.match(
+        return !!document.body?.innerText?.match(
           /We could not find the page you were looking for\./i
         );
       });

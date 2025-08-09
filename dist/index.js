@@ -35,7 +35,8 @@ async function main() {
             await (0, utils_1.navigateWithDelay)(page, pageUrl);
             // Check for 'We could not find the page you were looking for.'
             const notFound = await page.evaluate(() => {
-                return !!document.body.innerText.match(/We could not find the page you were looking for\./i);
+                var _a, _b;
+                return !!((_b = (_a = document.body) === null || _a === void 0 ? void 0 : _a.innerText) === null || _b === void 0 ? void 0 : _b.match(/We could not find the page you were looking for\./i));
             });
             if (notFound) {
                 if (pageNum === 1) {
