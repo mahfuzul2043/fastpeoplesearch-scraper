@@ -11,6 +11,7 @@ const common_names_json_1 = __importDefault(require("./common-names.json"));
 const names = common_names_json_1.default; // Type assertion to specify it's an array of strings
 const csvPath = path_1.default.join(__dirname, "people.csv");
 const csvExists = fs_1.default.existsSync(csvPath);
+const extensionPath = path_1.default.join(__dirname, "captcha-extension");
 // Write header if the file doesn't exist
 if (!csvExists) {
     fs_1.default.writeFileSync(csvPath, "Full Name,Age,Location,Phone\n");
@@ -25,6 +26,10 @@ async function main() {
         connectOption: {
             defaultViewport: null,
         },
+        args: [
+            `--load-extension=${extensionPath}`,
+            `--disable-extensions-except=${extensionPath}`,
+        ],
     });
     for (const name of names) {
         let pageNum = 1;

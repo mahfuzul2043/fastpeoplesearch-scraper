@@ -11,7 +11,7 @@ async function navigateWithDelay(page, url, ms = 7000) {
         }),
         page.goto(url),
     ]).catch(() => { });
-    await delay(ms);
+    // await delay(ms);
 }
 function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));

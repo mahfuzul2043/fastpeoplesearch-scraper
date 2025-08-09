@@ -8,6 +8,7 @@ const names = namesList as string[]; // Type assertion to specify it's an array 
 
 const csvPath = path.join(__dirname, "people.csv");
 const csvExists = fs.existsSync(csvPath);
+const extensionPath = path.join(__dirname, "captcha-extension");
 
 // Write header if the file doesn't exist
 if (!csvExists) {
@@ -25,6 +26,10 @@ async function main() {
     connectOption: {
       defaultViewport: null,
     },
+    args: [
+      `--load-extension=${extensionPath}`,
+      `--disable-extensions-except=${extensionPath}`,
+    ],
   });
 
   for (const name of names) {
@@ -69,7 +74,7 @@ async function main() {
         const data = await getProfileData(page, profile);
 
         if (data.age && data.age > 55) {
-          const row = `${data.fullName},${data.age},${data.address},${data.phone}\n`;
+          const row = `"${data.fullName}","${data.age}","${data.address}","${data.phone}"\n`;
           fs.appendFileSync(csvPath, row);
         }
       }
