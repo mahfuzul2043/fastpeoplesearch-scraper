@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ES2017", // or higher
+    "module": "commonjs", // or "ESNext" if needed
+    "lib": ["ES2017", "DOM"], // include libs you need
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true, // usually paired with the above,
+    "outDir": "./dist", // output directory for compiled files,
+    "resolveJsonModule": true
+  }
+}
