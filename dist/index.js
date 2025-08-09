@@ -49,7 +49,7 @@ async function main() {
                     break;
                 }
                 catch (error) {
-                    console.error("Timed out waiting for people-list card");
+                    console.error("Timed out waiting for people-list card. Retrying...");
                 }
             }
             const profiles = await page.$$(".people-list .card");
