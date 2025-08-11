@@ -1,4 +1,3 @@
-import { GoToOptions } from "puppeteer";
 import { ElementHandle } from "rebrowser-puppeteer-core";
 import { PageWithCursor } from "puppeteer-real-browser";
 
@@ -18,11 +17,76 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const waitForTextWithTimeout = (page: PageWithCursor, textRegex: RegExp) => {
+  let interval: NodeJS.Timeout;
+  const regexSource = textRegex.source;
+  const regexFlags = textRegex.flags;
+
+  const promise = new Promise<boolean>((resolve) => {
+    page
+      .evaluate(
+        (source, flags) =>
+          !!document.body?.innerText?.match(new RegExp(source, flags)),
+        regexSource,
+        regexFlags
+      )
+      .then((result) => {
+        if (result) {
+          resolve(true);
+          return;
+        }
+      });
+
+    interval = setInterval(() => {
+      page
+        .evaluate(
+          (source, flags) =>
+            !!document.body?.innerText?.match(new RegExp(source, flags)),
+          regexSource,
+          regexFlags
+        )
+        .then((result) => {
+          if (result) {
+            resolve(true);
+            clearInterval(interval);
+          }
+        });
+    }, 2000);
+  });
+
+  return { interval, promise };
+};
+
+const waitForSelectorWithTimeout = (page: PageWithCursor, selector: string) => {
+  let interval: NodeJS.Timeout;
+
+  const promise = new Promise<ElementHandle<Element>[]>((resolve) => {
+    page.$$(selector).then((result) => {
+      if (result.length) {
+        resolve(result);
+        return;
+      }
+    });
+
+    interval = setInterval(() => {
+      page.$$(selector).then((result) => {
+        if (result.length) {
+          resolve(result);
+          clearInterval(interval);
+        }
+      });
+    }, 2000);
+  });
+
+  return { interval, promise };
+};
+
 type Profile = {
   age: number;
   fullName: string;
   address: string;
   phone: string;
+  previousPhones: string[];
 };
 
 async function getProfileData(
@@ -31,7 +95,7 @@ async function getProfileData(
 ): Promise<Profile> {
   return await page.evaluate((card) => {
     // Helper to get text after a header
-    function getTextAfterHeader(header: string) {
+    function getTextAfterHeader(header) {
       const h3s = Array.from(card.querySelectorAll("h3"));
       const h3 = h3s.find((h) => h.textContent?.trim() === header);
       if (h3) {
@@ -65,12 +129,26 @@ async function getProfileData(
       ? addressDiv.textContent?.replace(/\s+/g, " ").trim()
       : "";
 
-    // Phone
-    const phoneLink = card.querySelector("a.nowrap[href^='/']");
-    const phone = phoneLink ? phoneLink.textContent?.trim() : "";
+    // Phone numbers
+    const phoneLinks = Array.from(card.querySelectorAll("a.nowrap[href^='/']"));
+    let phone = "";
+    let previousPhones = [];
 
-    return { age, fullName, address, phone };
+    if (phoneLinks.length > 0) {
+      phone = phoneLinks[0].textContent?.trim() || "";
+      previousPhones = phoneLinks
+        .slice(1)
+        .map((link) => link.textContent?.trim() || "");
+    }
+
+    return { age, fullName, address, phone, previousPhones };
   }, profile);
 }
 
-export { navigateWithDelay, delay, getProfileData };
+export {
+  navigateWithDelay,
+  delay,
+  getProfileData,
+  waitForTextWithTimeout,
+  waitForSelectorWithTimeout,
+};

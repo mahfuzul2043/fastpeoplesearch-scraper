@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.waitForSelectorWithTimeout = exports.waitForTextWithTimeout = void 0;
 exports.navigateWithDelay = navigateWithDelay;
 exports.delay = delay;
 exports.getProfileData = getProfileData;
@@ -16,6 +17,54 @@ async function navigateWithDelay(page, url, ms = 7000) {
 function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
+const waitForTextWithTimeout = (page, textRegex) => {
+    let interval;
+    const regexSource = textRegex.source;
+    const regexFlags = textRegex.flags;
+    const promise = new Promise((resolve) => {
+        page
+            .evaluate((source, flags) => { var _a, _b; return !!((_b = (_a = document.body) === null || _a === void 0 ? void 0 : _a.innerText) === null || _b === void 0 ? void 0 : _b.match(new RegExp(source, flags))); }, regexSource, regexFlags)
+            .then((result) => {
+            if (result) {
+                resolve(true);
+                return;
+            }
+        });
+        interval = setInterval(() => {
+            page
+                .evaluate((source, flags) => { var _a, _b; return !!((_b = (_a = document.body) === null || _a === void 0 ? void 0 : _a.innerText) === null || _b === void 0 ? void 0 : _b.match(new RegExp(source, flags))); }, regexSource, regexFlags)
+                .then((result) => {
+                if (result) {
+                    resolve(true);
+                    clearInterval(interval);
+                }
+            });
+        }, 2000);
+    });
+    return { interval, promise };
+};
+exports.waitForTextWithTimeout = waitForTextWithTimeout;
+const waitForSelectorWithTimeout = (page, selector) => {
+    let interval;
+    const promise = new Promise((resolve) => {
+        page.$$(selector).then((result) => {
+            if (result.length) {
+                resolve(result);
+                return;
+            }
+        });
+        interval = setInterval(() => {
+            page.$$(selector).then((result) => {
+                if (result.length) {
+                    resolve(result);
+                    clearInterval(interval);
+                }
+            });
+        }, 2000);
+    });
+    return { interval, promise };
+};
+exports.waitForSelectorWithTimeout = waitForSelectorWithTimeout;
 async function getProfileData(page, profile) {
     return await page.evaluate((card) => {
         var _a, _b, _c;
@@ -49,9 +98,16 @@ async function getProfileData(page, profile) {
         const address = addressDiv
             ? (_b = addressDiv.textContent) === null || _b === void 0 ? void 0 : _b.replace(/\s+/g, " ").trim()
             : "";
-        // Phone
-        const phoneLink = card.querySelector("a.nowrap[href^='/']");
-        const phone = phoneLink ? (_c = phoneLink.textContent) === null || _c === void 0 ? void 0 : _c.trim() : "";
-        return { age, fullName, address, phone };
+        // Phone numbers
+        const phoneLinks = Array.from(card.querySelectorAll("a.nowrap[href^='/']"));
+        let phone = "";
+        let previousPhones = [];
+        if (phoneLinks.length > 0) {
+            phone = ((_c = phoneLinks[0].textContent) === null || _c === void 0 ? void 0 : _c.trim()) || "";
+            previousPhones = phoneLinks
+                .slice(1)
+                .map((link) => { var _a; return ((_a = link.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || ""; });
+        }
+        return { age, fullName, address, phone, previousPhones };
     }, profile);
 }

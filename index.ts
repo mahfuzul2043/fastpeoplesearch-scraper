@@ -1,8 +1,14 @@
 import { connect } from "puppeteer-real-browser";
 import fs from "fs";
 import path from "path";
-import { getProfileData, navigateWithDelay } from "./utils";
+import {
+  getProfileData,
+  navigateWithDelay,
+  waitForSelectorWithTimeout,
+  waitForTextWithTimeout,
+} from "./utils";
 import namesList from "./common-names.json";
+import { ElementHandle } from "rebrowser-puppeteer-core";
 
 const names = namesList as string[]; // Type assertion to specify it's an array of strings
 
@@ -12,17 +18,21 @@ const extensionPath = path.join(__dirname, "captcha-extension");
 
 // Write header if the file doesn't exist
 if (!csvExists) {
-  fs.writeFileSync(csvPath, "Full Name,Age,Location,Phone\n");
+  fs.writeFileSync(csvPath, "Full Name,Age,Location,Phone,Previous Phones\n");
 }
 
 const BASE_URL = "https://www.fastpeoplesearch.com";
 
 async function main() {
+  const chromePath = path.join(__dirname, "chrome-win", "chrome.exe");
+
   const { page, browser } = await connect({
     turnstile: true,
     headless: false,
     // disableXvfb: true,
-    customConfig: {},
+    customConfig: {
+      chromePath,
+    },
     connectOption: {
       defaultViewport: null,
     },
@@ -43,24 +53,30 @@ async function main() {
 
       await navigateWithDelay(page, pageUrl);
 
-      // Check for 'We could not find the page you were looking for.'
-      const notFound = await page.evaluate(() => {
-        return !!document.body?.innerText?.match(
-          /We could not find the page you were looking for\./i
-        );
-      });
-
-      if (notFound) {
-        if (pageNum === 1) {
-          console.log(`Page not found for ${name}, skipping.`);
-        }
-
-        break;
-      }
+      let notFoundFlag = false;
+      let profiles: ElementHandle<Element>[];
 
       while (true) {
         try {
-          await page.waitForSelector(".people-list .card", { timeout: 5000 });
+          const { promise: notFound, interval: notFoundInterval } =
+            waitForTextWithTimeout(
+              page,
+              /We could not find the page you were looking for/i
+            );
+
+          const { promise: peopleList, interval: peopleListInterval } =
+            waitForSelectorWithTimeout(page, ".people-list .card");
+
+          const result = await Promise.race([notFound, peopleList]);
+
+          if (result === true) {
+            notFoundFlag = true;
+          } else {
+            profiles = result as ElementHandle<Element>[];
+          }
+
+          clearInterval(notFoundInterval);
+          clearInterval(peopleListInterval);
 
           break;
         } catch (error) {
@@ -68,15 +84,22 @@ async function main() {
         }
       }
 
-      const profiles = await page.$$(".people-list .card");
+      if (notFoundFlag) {
+        console.log(`No more results for "${name}". Moving to next name.`);
+        break;
+      }
 
       for (const profile of profiles) {
         const data = await getProfileData(page, profile);
 
         if (data.age && data.age > 30) {
-          const row = `"${data.fullName}","${data.age}","${data.address}","${data.phone}"\n`;
+          const row = `"${data.fullName}","${data.age}","${data.address}","${
+            data.phone
+          }","${data.previousPhones.join("; ")}"\n`;
           fs.appendFileSync(csvPath, row);
         }
+
+        await profile.dispose();
       }
 
       pageNum++;
