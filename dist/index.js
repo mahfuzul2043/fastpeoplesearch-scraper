@@ -61,8 +61,8 @@ async function main() {
             const profiles = await page.$$(".people-list .card");
             for (const profile of profiles) {
                 const data = await (0, utils_1.getProfileData)(page, profile);
-                if (data.age && data.age > 55) {
-                    const row = `${data.fullName},${data.age},${data.address},${data.phone}\n`;
+                if (data.age && data.age > 30) {
+                    const row = `"${data.fullName}","${data.age}","${data.address}","${data.phone}"\n`;
                     fs_1.default.appendFileSync(csvPath, row);
                 }
             }

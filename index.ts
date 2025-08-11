@@ -73,7 +73,7 @@ async function main() {
       for (const profile of profiles) {
         const data = await getProfileData(page, profile);
 
-        if (data.age && data.age > 55) {
+        if (data.age && data.age > 30) {
           const row = `"${data.fullName}","${data.age}","${data.address}","${data.phone}"\n`;
           fs.appendFileSync(csvPath, row);
         }
