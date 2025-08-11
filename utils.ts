@@ -61,20 +61,26 @@ const waitForSelectorWithTimeout = (page: PageWithCursor, selector: string) => {
   let interval: NodeJS.Timeout;
 
   const promise = new Promise<ElementHandle<Element>[]>((resolve) => {
-    page.$$(selector).then((result) => {
-      if (result.length) {
-        resolve(result);
-        return;
-      }
-    });
-
-    interval = setInterval(() => {
-      page.$$(selector).then((result) => {
+    page
+      .$$(selector)
+      .then((result) => {
         if (result.length) {
           resolve(result);
-          clearInterval(interval);
+          return;
         }
-      });
+      })
+      .catch(() => {});
+
+    interval = setInterval(() => {
+      page
+        .$$(selector)
+        .then((result) => {
+          if (result.length) {
+            resolve(result);
+            clearInterval(interval);
+          }
+        })
+        .catch(() => {});
     }, 2000);
   });
 

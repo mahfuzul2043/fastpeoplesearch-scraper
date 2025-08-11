@@ -47,19 +47,25 @@ exports.waitForTextWithTimeout = waitForTextWithTimeout;
 const waitForSelectorWithTimeout = (page, selector) => {
     let interval;
     const promise = new Promise((resolve) => {
-        page.$$(selector).then((result) => {
+        page
+            .$$(selector)
+            .then((result) => {
             if (result.length) {
                 resolve(result);
                 return;
             }
-        });
+        })
+            .catch(() => { });
         interval = setInterval(() => {
-            page.$$(selector).then((result) => {
+            page
+                .$$(selector)
+                .then((result) => {
                 if (result.length) {
                     resolve(result);
                     clearInterval(interval);
                 }
-            });
+            })
+                .catch(() => { });
         }, 2000);
     });
     return { interval, promise };

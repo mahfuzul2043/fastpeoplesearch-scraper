@@ -56,8 +56,6 @@ async function main() {
                     }
                     clearInterval(notFoundInterval);
                     clearInterval(peopleListInterval);
-                    console.log("waitForText interval is: ", notFoundInterval);
-                    console.log("waitForSelector interval is: ", peopleListInterval);
                     break;
                 }
                 catch (error) {
