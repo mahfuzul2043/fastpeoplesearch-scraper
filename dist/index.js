@@ -35,7 +35,7 @@ async function main() {
         ],
     });
     for (const name of names) {
-        let pageNum = 9;
+        let pageNum = 1;
         while (true) {
             let pageUrl = pageNum === 1
                 ? `${BASE_URL}/name/${encodeURIComponent(name)}`
