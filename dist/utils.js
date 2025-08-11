@@ -17,7 +17,7 @@ async function navigateWithDelay(page, url, ms = 7000) {
 function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
-const waitForTextWithTimeout = (page, textRegex) => {
+const waitForTextWithTimeout = (page, textRegex, callback) => {
     let interval;
     const regexSource = textRegex.source;
     const regexFlags = textRegex.flags;
@@ -27,6 +27,7 @@ const waitForTextWithTimeout = (page, textRegex) => {
             .then((result) => {
             if (result) {
                 resolve(true);
+                callback();
                 return;
             }
         });
@@ -36,6 +37,7 @@ const waitForTextWithTimeout = (page, textRegex) => {
                 .then((result) => {
                 if (result) {
                     resolve(true);
+                    callback();
                     clearInterval(interval);
                 }
             });

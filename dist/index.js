@@ -8,6 +8,8 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const utils_1 = require("./utils");
 const common_names_json_1 = __importDefault(require("./common-names.json"));
+const prompt_sync_1 = __importDefault(require("prompt-sync"));
+const prompt = (0, prompt_sync_1.default)();
 const names = common_names_json_1.default; // Type assertion to specify it's an array of strings
 const csvPath = path_1.default.join(__dirname, "people.csv");
 const csvExists = fs_1.default.existsSync(csvPath);
@@ -42,20 +44,37 @@ async function main() {
                 : `${BASE_URL}/name/${encodeURIComponent(name)}/page/${pageNum}`;
             await (0, utils_1.navigateWithDelay)(page, pageUrl);
             let notFoundFlag = false;
+            let rateLimitFlag = false;
             let profiles;
             while (true) {
                 try {
-                    const { promise: notFound, interval: notFoundInterval } = (0, utils_1.waitForTextWithTimeout)(page, /We could not find the page you were looking for/i);
+                    let textResultType;
+                    const { promise: notFound, interval: notFoundInterval } = (0, utils_1.waitForTextWithTimeout)(page, /We could not find the page you were looking for/i, () => {
+                        textResultType = "notFound";
+                    });
+                    const { promise: rateLimitExceeded, interval: rateLimitInterval } = (0, utils_1.waitForTextWithTimeout)(page, /Rate Limit Exceeded/i, () => {
+                        textResultType = "rateLimitExceeded";
+                    });
                     const { promise: peopleList, interval: peopleListInterval } = (0, utils_1.waitForSelectorWithTimeout)(page, ".people-list .card");
-                    const result = await Promise.race([notFound, peopleList]);
+                    const result = await Promise.race([
+                        notFound,
+                        peopleList,
+                        rateLimitExceeded,
+                    ]);
                     if (result === true) {
-                        notFoundFlag = true;
+                        if (textResultType === "notFound") {
+                            notFoundFlag = true;
+                        }
+                        if (textResultType === "rateLimitExceeded") {
+                            rateLimitFlag = true;
+                        }
                     }
                     else {
                         profiles = result;
                     }
                     clearInterval(notFoundInterval);
                     clearInterval(peopleListInterval);
+                    clearInterval(rateLimitInterval);
                     break;
                 }
                 catch (error) {
@@ -65,6 +84,10 @@ async function main() {
             if (notFoundFlag) {
                 console.log(`No more results for "${name}". Moving to next name.`);
                 break;
+            }
+            if (rateLimitFlag) {
+                prompt("Rate limit exceeded.");
+                return;
             }
             for (const profile of profiles) {
                 const data = await (0, utils_1.getProfileData)(page, profile);

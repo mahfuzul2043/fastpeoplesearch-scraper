@@ -9,6 +9,8 @@ import {
 } from "./utils";
 import namesList from "./common-names.json";
 import { ElementHandle } from "rebrowser-puppeteer-core";
+import promptSync from "prompt-sync";
+const prompt = promptSync();
 
 const names = namesList as string[]; // Type assertion to specify it's an array of strings
 
@@ -54,29 +56,51 @@ async function main() {
       await navigateWithDelay(page, pageUrl);
 
       let notFoundFlag = false;
+      let rateLimitFlag = false;
       let profiles: ElementHandle<Element>[];
 
       while (true) {
         try {
+          let textResultType: "notFound" | "rateLimitExceeded";
+
           const { promise: notFound, interval: notFoundInterval } =
             waitForTextWithTimeout(
               page,
-              /We could not find the page you were looking for/i
+              /We could not find the page you were looking for/i,
+              () => {
+                textResultType = "notFound";
+              }
             );
+
+          const { promise: rateLimitExceeded, interval: rateLimitInterval } =
+            waitForTextWithTimeout(page, /Rate Limit Exceeded/i, () => {
+              textResultType = "rateLimitExceeded";
+            });
 
           const { promise: peopleList, interval: peopleListInterval } =
             waitForSelectorWithTimeout(page, ".people-list .card");
 
-          const result = await Promise.race([notFound, peopleList]);
+          const result = await Promise.race([
+            notFound,
+            peopleList,
+            rateLimitExceeded,
+          ]);
 
           if (result === true) {
-            notFoundFlag = true;
+            if (textResultType === "notFound") {
+              notFoundFlag = true;
+            }
+
+            if (textResultType === "rateLimitExceeded") {
+              rateLimitFlag = true;
+            }
           } else {
             profiles = result as ElementHandle<Element>[];
           }
 
           clearInterval(notFoundInterval);
           clearInterval(peopleListInterval);
+          clearInterval(rateLimitInterval);
 
           break;
         } catch (error) {
@@ -87,6 +111,11 @@ async function main() {
       if (notFoundFlag) {
         console.log(`No more results for "${name}". Moving to next name.`);
         break;
+      }
+
+      if (rateLimitFlag) {
+        prompt("Rate limit exceeded.");
+        return;
       }
 
       for (const profile of profiles) {

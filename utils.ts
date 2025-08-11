@@ -17,7 +17,11 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const waitForTextWithTimeout = (page: PageWithCursor, textRegex: RegExp) => {
+const waitForTextWithTimeout = (
+  page: PageWithCursor,
+  textRegex: RegExp,
+  callback?: () => void
+) => {
   let interval: NodeJS.Timeout;
   const regexSource = textRegex.source;
   const regexFlags = textRegex.flags;
@@ -33,6 +37,7 @@ const waitForTextWithTimeout = (page: PageWithCursor, textRegex: RegExp) => {
       .then((result) => {
         if (result) {
           resolve(true);
+          callback();
           return;
         }
       });
@@ -48,6 +53,7 @@ const waitForTextWithTimeout = (page: PageWithCursor, textRegex: RegExp) => {
         .then((result) => {
           if (result) {
             resolve(true);
+            callback();
             clearInterval(interval);
           }
         });
