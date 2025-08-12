@@ -7,12 +7,12 @@ import {
   waitForSelectorWithTimeout,
   waitForTextWithTimeout,
 } from "./utils";
-import namesList from "./common-names.json";
 import { ElementHandle } from "rebrowser-puppeteer-core";
 import promptSync from "prompt-sync";
 const prompt = promptSync();
 
-const names = namesList as string[]; // Type assertion to specify it's an array of strings
+const namesPath = path.join(__dirname, "common-names.json");
+const names: string[] = JSON.parse(fs.readFileSync(namesPath, "utf8"));
 
 const csvPath = path.join(__dirname, "people.csv");
 const csvExists = fs.existsSync(csvPath);

@@ -6,10 +6,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const utils_1 = require("./utils");
-const common_names_json_1 = __importDefault(require("./common-names.json"));
 const prompt_sync_1 = __importDefault(require("prompt-sync"));
 const prompt = (0, prompt_sync_1.default)();
-const names = common_names_json_1.default; // Type assertion to specify it's an array of strings
+const namesPath = path_1.default.join(__dirname, "common-names.json");
+const names = JSON.parse(fs_1.default.readFileSync(namesPath, "utf8"));
 const csvPath = path_1.default.join(__dirname, "people.csv");
 const csvExists = fs_1.default.existsSync(csvPath);
 // Write header if the file doesn't exist
@@ -28,10 +28,14 @@ async function main() {
             await (0, utils_1.navigateWithDelay)(page, pageUrl);
             let notFoundFlag = false;
             let rateLimitFlag = false;
+            let captchaFlag = false;
             let profiles;
             while (true) {
                 try {
                     let textResultType;
+                    const { promise: captcha, interval: captchaInterval } = (0, utils_1.waitForTextWithTimeout)(page, /Are you human/i, () => {
+                        textResultType = "captcha";
+                    });
                     const { promise: notFound, interval: notFoundInterval } = (0, utils_1.waitForTextWithTimeout)(page, /We could not find the page you were looking for/i, () => {
                         textResultType = "notFound";
                     });
@@ -43,6 +47,7 @@ async function main() {
                         notFound,
                         peopleList,
                         rateLimitExceeded,
+                        captcha,
                     ]);
                     if (result === true) {
                         if (textResultType === "notFound") {
@@ -51,6 +56,9 @@ async function main() {
                         if (textResultType === "rateLimitExceeded") {
                             rateLimitFlag = true;
                         }
+                        if (textResultType === "captcha") {
+                            captchaFlag = true;
+                        }
                     }
                     else {
                         profiles = result;
@@ -58,11 +66,15 @@ async function main() {
                     clearInterval(notFoundInterval);
                     clearInterval(peopleListInterval);
                     clearInterval(rateLimitInterval);
+                    clearInterval(captchaInterval);
                     break;
                 }
                 catch (error) {
                     console.error("An unexpected error occurred. Retrying...", error);
                 }
+            }
+            if (captchaFlag) {
+                console.log("Captcha detected. Waiting for manual resolution...");
             }
             if (notFoundFlag) {
                 console.log(`No more results for "${name}". Moving to next name.`);

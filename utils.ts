@@ -41,7 +41,8 @@ const waitForTextWithTimeout = (
           callback();
           return;
         }
-      });
+      })
+      .catch(() => {});
 
     interval = setInterval(() => {
       page
@@ -57,7 +58,8 @@ const waitForTextWithTimeout = (
             callback();
             clearInterval(interval);
           }
-        });
+        })
+        .catch(() => {});
     }, 2000);
   });
 

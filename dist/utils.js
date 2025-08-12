@@ -35,7 +35,8 @@ const waitForTextWithTimeout = (page, textRegex, callback) => {
                 callback();
                 return;
             }
-        });
+        })
+            .catch(() => { });
         interval = setInterval(() => {
             page
                 .evaluate((source, flags) => { var _a, _b; return !!((_b = (_a = document.body) === null || _a === void 0 ? void 0 : _a.innerText) === null || _b === void 0 ? void 0 : _b.match(new RegExp(source, flags))); }, regexSource, regexFlags)
@@ -45,7 +46,8 @@ const waitForTextWithTimeout = (page, textRegex, callback) => {
                     callback();
                     clearInterval(interval);
                 }
-            });
+            })
+                .catch(() => { });
         }, 2000);
     });
     return { interval, promise };
