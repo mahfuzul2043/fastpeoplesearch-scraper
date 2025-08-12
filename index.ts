@@ -1,7 +1,7 @@
-import { connect } from "puppeteer-real-browser";
 import fs from "fs";
 import path from "path";
 import {
+  connectPuppeteer,
   getProfileData,
   navigateWithDelay,
   waitForSelectorWithTimeout,
@@ -16,7 +16,6 @@ const names = namesList as string[]; // Type assertion to specify it's an array 
 
 const csvPath = path.join(__dirname, "people.csv");
 const csvExists = fs.existsSync(csvPath);
-const extensionPath = path.join(__dirname, "captcha-extension");
 
 // Write header if the file doesn't exist
 if (!csvExists) {
@@ -26,23 +25,7 @@ if (!csvExists) {
 const BASE_URL = "https://www.fastpeoplesearch.com";
 
 async function main() {
-  const chromePath = path.join(__dirname, "chrome-win", "chrome.exe");
-
-  const { page, browser } = await connect({
-    turnstile: true,
-    headless: false,
-    // disableXvfb: true,
-    customConfig: {
-      chromePath,
-    },
-    connectOption: {
-      defaultViewport: null,
-    },
-    args: [
-      `--load-extension=${extensionPath}`,
-      `--disable-extensions-except=${extensionPath}`,
-    ],
-  });
+  let { page, browser } = await connectPuppeteer();
 
   for (const name of names) {
     let pageNum = 1;
@@ -104,7 +87,7 @@ async function main() {
 
           break;
         } catch (error) {
-          console.error("Timed out waiting for people-list card. Retrying...");
+          console.error("An unexpected error occurred. Retrying...", error);
         }
       }
 
@@ -114,8 +97,25 @@ async function main() {
       }
 
       if (rateLimitFlag) {
-        prompt("Rate limit exceeded.");
-        return;
+        console.log("Rate limit exceeded");
+
+        while (true) {
+          const input = prompt(
+            'Turn on a US based VPN Server and press "C" to continue, or "Q" to quit: '
+          );
+
+          if (input?.toUpperCase() === "C") {
+            break;
+          }
+
+          if (input?.toUpperCase() === "Q") {
+            await page.close();
+            await browser.close();
+            process.exit(0);
+          }
+        }
+
+        continue;
       }
 
       for (const profile of profiles) {

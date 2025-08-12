@@ -3,7 +3,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const puppeteer_real_browser_1 = require("puppeteer-real-browser");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const utils_1 = require("./utils");
@@ -13,29 +12,13 @@ const prompt = (0, prompt_sync_1.default)();
 const names = common_names_json_1.default; // Type assertion to specify it's an array of strings
 const csvPath = path_1.default.join(__dirname, "people.csv");
 const csvExists = fs_1.default.existsSync(csvPath);
-const extensionPath = path_1.default.join(__dirname, "captcha-extension");
 // Write header if the file doesn't exist
 if (!csvExists) {
     fs_1.default.writeFileSync(csvPath, "Full Name,Age,Location,Phone,Previous Phones\n");
 }
 const BASE_URL = "https://www.fastpeoplesearch.com";
 async function main() {
-    const chromePath = path_1.default.join(__dirname, "chrome-win", "chrome.exe");
-    const { page, browser } = await (0, puppeteer_real_browser_1.connect)({
-        turnstile: true,
-        headless: false,
-        // disableXvfb: true,
-        customConfig: {
-            chromePath,
-        },
-        connectOption: {
-            defaultViewport: null,
-        },
-        args: [
-            `--load-extension=${extensionPath}`,
-            `--disable-extensions-except=${extensionPath}`,
-        ],
-    });
+    let { page, browser } = await (0, utils_1.connectPuppeteer)();
     for (const name of names) {
         let pageNum = 1;
         while (true) {
@@ -78,7 +61,7 @@ async function main() {
                     break;
                 }
                 catch (error) {
-                    console.error("Timed out waiting for people-list card. Retrying...");
+                    console.error("An unexpected error occurred. Retrying...", error);
                 }
             }
             if (notFoundFlag) {
@@ -86,8 +69,19 @@ async function main() {
                 break;
             }
             if (rateLimitFlag) {
-                prompt("Rate limit exceeded.");
-                return;
+                console.log("Rate limit exceeded");
+                while (true) {
+                    const input = prompt('Turn on a US based VPN Server and press "C" to continue, or "Q" to quit: ');
+                    if ((input === null || input === void 0 ? void 0 : input.toUpperCase()) === "C") {
+                        break;
+                    }
+                    if ((input === null || input === void 0 ? void 0 : input.toUpperCase()) === "Q") {
+                        await page.close();
+                        await browser.close();
+                        process.exit(0);
+                    }
+                }
+                continue;
             }
             for (const profile of profiles) {
                 const data = await (0, utils_1.getProfileData)(page, profile);

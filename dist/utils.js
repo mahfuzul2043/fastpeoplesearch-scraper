@@ -1,9 +1,14 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.waitForSelectorWithTimeout = exports.waitForTextWithTimeout = void 0;
+exports.connectPuppeteer = exports.waitForSelectorWithTimeout = exports.waitForTextWithTimeout = void 0;
 exports.navigateWithDelay = navigateWithDelay;
 exports.delay = delay;
 exports.getProfileData = getProfileData;
+const puppeteer_real_browser_1 = require("puppeteer-real-browser");
+const path_1 = __importDefault(require("path"));
 async function navigateWithDelay(page, url, ms = 7000) {
     await Promise.all([
         page.waitForNavigation({
@@ -119,3 +124,28 @@ async function getProfileData(page, profile) {
         return { age, fullName, address, phone, previousPhones };
     }, profile);
 }
+const connectPuppeteer = (proxy) => {
+    const extensionPath = path_1.default.join(__dirname, "captcha-extension");
+    const args = [
+        `--load-extension=${extensionPath}`,
+        `--disable-extensions-except=${extensionPath}`,
+        "--ignore-certificate-errors",
+        "--allow-insecure-localhost",
+    ];
+    if (proxy) {
+        args.push(`--proxy-server=${proxy}`);
+    }
+    return (0, puppeteer_real_browser_1.connect)({
+        turnstile: true,
+        headless: false,
+        // disableXvfb: true,
+        customConfig: {
+            chromePath: path_1.default.join(__dirname, "chrome-win", "chrome.exe"),
+        },
+        connectOption: {
+            defaultViewport: null,
+        },
+        args,
+    });
+};
+exports.connectPuppeteer = connectPuppeteer;

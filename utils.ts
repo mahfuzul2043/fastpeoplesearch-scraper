@@ -1,5 +1,6 @@
 import { ElementHandle } from "rebrowser-puppeteer-core";
-import { PageWithCursor } from "puppeteer-real-browser";
+import { connect, PageWithCursor } from "puppeteer-real-browser";
+import path from "path";
 
 async function navigateWithDelay(page: PageWithCursor, url: string, ms = 7000) {
   await Promise.all([
@@ -157,10 +158,39 @@ async function getProfileData(
   }, profile);
 }
 
+const connectPuppeteer = (proxy?: string) => {
+  const extensionPath = path.join(__dirname, "captcha-extension");
+
+  const args = [
+    `--load-extension=${extensionPath}`,
+    `--disable-extensions-except=${extensionPath}`,
+    "--ignore-certificate-errors",
+    "--allow-insecure-localhost",
+  ];
+
+  if (proxy) {
+    args.push(`--proxy-server=${proxy}`);
+  }
+
+  return connect({
+    turnstile: true,
+    headless: false,
+    // disableXvfb: true,
+    customConfig: {
+      chromePath: path.join(__dirname, "chrome-win", "chrome.exe"),
+    },
+    connectOption: {
+      defaultViewport: null,
+    },
+    args,
+  });
+};
+
 export {
   navigateWithDelay,
   delay,
   getProfileData,
   waitForTextWithTimeout,
   waitForSelectorWithTimeout,
+  connectPuppeteer,
 };
