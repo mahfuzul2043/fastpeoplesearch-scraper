@@ -28,14 +28,10 @@ async function main() {
             await (0, utils_1.navigateWithDelay)(page, pageUrl);
             let notFoundFlag = false;
             let rateLimitFlag = false;
-            let captchaFlag = false;
             let profiles;
             while (true) {
                 try {
                     let textResultType;
-                    const { promise: captcha, interval: captchaInterval } = (0, utils_1.waitForTextWithTimeout)(page, /Are you human/i, () => {
-                        textResultType = "captcha";
-                    });
                     const { promise: notFound, interval: notFoundInterval } = (0, utils_1.waitForTextWithTimeout)(page, /We could not find the page you were looking for/i, () => {
                         textResultType = "notFound";
                     });
@@ -47,7 +43,6 @@ async function main() {
                         notFound,
                         peopleList,
                         rateLimitExceeded,
-                        captcha,
                     ]);
                     if (result === true) {
                         if (textResultType === "notFound") {
@@ -56,9 +51,6 @@ async function main() {
                         if (textResultType === "rateLimitExceeded") {
                             rateLimitFlag = true;
                         }
-                        if (textResultType === "captcha") {
-                            captchaFlag = true;
-                        }
                     }
                     else {
                         profiles = result;
@@ -66,15 +58,11 @@ async function main() {
                     clearInterval(notFoundInterval);
                     clearInterval(peopleListInterval);
                     clearInterval(rateLimitInterval);
-                    clearInterval(captchaInterval);
                     break;
                 }
                 catch (error) {
                     console.error("An unexpected error occurred. Retrying...", error);
                 }
-            }
-            if (captchaFlag) {
-                console.log("Captcha detected. Waiting for manual resolution...");
             }
             if (notFoundFlag) {
                 console.log(`No more results for "${name}". Moving to next name.`);
