@@ -86,7 +86,14 @@ async function main() {
             for (const profile of profiles) {
                 const data = await (0, utils_1.getProfileData)(page, profile);
                 if (data.age && data.age > 30) {
-                    const row = `"${data.fullName}","${data.age}","${data.address}","${data.phone}","${data.previousPhones.join("; ")}"\n`;
+                    const phoneRegex = /(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g;
+                    const previousPhones = data.previousPhones.map((prevPhone) => {
+                        return prevPhone.replace(phoneRegex, (match) => {
+                            const digits = match.replace(/\D/g, "");
+                            return `"=HYPERLINK(""tel:${digits}"",""${match}"")"`;
+                        });
+                    });
+                    const row = `"${data.fullName}","${data.age}","${data.address}","=HYPERLINK(""tel:${data.phone}"",""${data.phone}"")",${previousPhones.length ? previousPhones.join(",") : ""}\n`;
                     fs_1.default.appendFileSync(csvPath, row);
                 }
                 await profile.dispose();
